@@ -11,11 +11,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Build image
-        run: docker build . --file Dockerfile --tag $IMAGE_NAME
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
       - name: Log into registry
         run: echo "${{ secrets.ACCESS_TOKEN }}" | docker login -u abuxliu --password-stdin
-      - name: Push image
+      - name: Build and push container image
         run: |
           IMAGE_ID=abuxliu/$IMAGE_NAME
           IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
@@ -24,5 +27,6 @@ jobs:
           [ "$VERSION" == "master" ] && VERSION=latest
           echo IMAGE_ID=$IMAGE_ID
           echo VERSION=$VERSION
-          docker tag $IMAGE_NAME $IMAGE_ID:$VERSION
-          docker push $IMAGE_ID:$VERSION
+          docker buildx build --push \
+          --tag $IMAGE_ID:$VERSION \
+          --platform linux/amd64,linux/arm/v7,linux/arm64 .
